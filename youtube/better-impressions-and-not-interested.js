@@ -4,7 +4,7 @@
 // @match       https://www.youtube.com/
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @version     1.0
+// @version     1.0.1
 // @author      cecilia-sanare
 // @description Removes videos that surpass a impression threshold or if the user specifies they aren't interested
 // @downloadURL https://raw.githubusercontent.com/cecilia-sanare/violentmonkey-scripts/refs/heads/main/youtube/better-impressions-and-not-interested.js
