@@ -4,19 +4,24 @@
 // @match       https://www.youtube.com/
 // @grant       GM_getValue
 // @grant       GM_setValue
-// @version     1.0.1
+// @version     1.1.0
 // @author      cecilia-sanare
 // @description Removes videos that surpass a impression threshold or if the user specifies they aren't interested
 // @downloadURL https://raw.githubusercontent.com/cecilia-sanare/violentmonkey-scripts/refs/heads/main/youtube/better-impressions-and-not-interested.js
 // @homepageURL https://github.com/cecilia-sanare/violentmonkey-scripts
 // ==/UserScript==
 
-if (!GM_getValue('IMPRESSION_THRESHOLD')) {
-  GM_setValue('IMPRESSION_THRESHOLD', 3);
-}
+const getValue = (key, defaultValue) => {
+  if (!GM_getValue(key)) {
+    GM_setValue(key, value);
+  }
+
+  return GM_getValue(key);
+};
 
 // Set this to 0 to disable
-const IMPRESSION_THRESHOLD = GM_getValue('IMPRESSION_THRESHOLD');
+const IMPRESSION_THRESHOLD = getValue('IMPRESSION_THRESHOLD', 3);
+const DAILY_RESET = getValue('DAILY_RESET', true);
 
 const customStyles = document.createElement('style');
 
@@ -57,7 +62,7 @@ class DSY {
         DSY._info = JSON.parse(raw_info);
       }
 
-      if (!DSY._info || DSY._info.date !== date) {
+      if (!DSY._info || (DAILY_RESET && DSY._info.date !== date)) {
         DSY.reset();
         DSY.commit();
       }
