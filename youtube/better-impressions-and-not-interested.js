@@ -86,9 +86,14 @@ class DSY {
       return DSY.not_interested.includes(id) || (IMPRESSION_THRESHOLD > 0 && DSY.impressions.get(id) >= IMPRESSION_THRESHOLD - 1);
     },
 
-    hide(element) {
+    hide(element, doNotRemove) {
       DSY.videos.hidden_count++;
-      element.parentElement.removeChild(element);
+      // This is used purely for the top row since YouTube seems to forcibly readd them otherwise
+      if (doNotRemove) {
+        element.style.display = 'none';
+      } else {
+        element.parentElement.removeChild(element);
+      }
     },
 
     hidden_count: 0,
@@ -137,6 +142,10 @@ class DSY {
   }
 }
 
+function flatten(arrays) {
+  return arrays.reduce((output, array) => output.concat(array), []);
+}
+
 function isTagName(tagName) {
   return (element) => element.tagName?.toLowerCase() === tagName;
 }
@@ -179,7 +188,7 @@ async function waitFor(tagName, root = document.body) {
   });
 }
 
-function handleImpressions(videos) {
+function handleImpressions(videos, doNotRemove) {
   let has_changed = false;
 
   for (const video of videos) {
@@ -196,7 +205,7 @@ function handleImpressions(videos) {
 
     const link = video.querySelector('a');
 
-    if (DSY.videos.is_hidden(id)) DSY.videos.hide(video);
+    if (DSY.videos.is_hidden(id)) DSY.videos.hide(video, doNotRemove);
     else if (IMPRESSION_THRESHOLD !== 0) {
       DSY.impressions.increment(id);
       has_changed = true;
@@ -215,20 +224,16 @@ function handleImpressions(videos) {
 
   if (has_changed) DSY.commit();
 
-  DSY.log(`${DSY.videos.hidden_count} videos hidden`);
+  DSY.log(`${DSY.videos.hidden_count} videos ${doNotRemove ? 'hidden' : 'removed'}`);
 }
 
 const start = async () => {
   const browse = await waitFor('ytd-browse', document.querySelector('ytd-page-manager'));
   const contents = browse.querySelector('[id="contents"]');
 
-  handleImpressions(contents.querySelectorAll('ytd-rich-item-renderer'));
+  handleImpressions(Array.from(contents.querySelectorAll('ytd-rich-item-renderer')), true);
 
-  const observer = new MutationObserver((records) => {
-    const videos = records.reduce((output, record) => output.concat(Array.from(record.addedNodes)), []);
-
-    handleImpressions(videos);
-  });
+  const observer = new MutationObserver((records) => handleImpressions(flatten(records.map((record) => Array.from(record.addedNodes)))));
 
   observer.observe(contents, {
     childList: true,
@@ -245,14 +250,14 @@ const start = async () => {
       if (path.some(isTagName('ytd-menu-renderer'))) {
         const popup = document.querySelector('tp-yt-iron-dropdown');
         const notInterestedDropdown = document.querySelector('tp-yt-iron-dropdown ytd-menu-service-item-renderer:nth-child(6)');
-        const popupObserver = new MutationObserver((records) => {
+        const popupObserver = new MutationObserver(() => {
           if (popup.style.display !== 'none') return;
 
           popupObserver.disconnect();
           notInterestedDropdown.removeEventListener('click', onNotInterested);
         });
 
-        const onNotInterested = (event) => {
+        const onNotInterested = () => {
           DSY.not_interested.add(id);
           DSY.commit();
           popupObserver.disconnect();
@@ -274,5 +279,3 @@ const start = async () => {
 };
 
 start();
-
-window.DSY = DSY;
