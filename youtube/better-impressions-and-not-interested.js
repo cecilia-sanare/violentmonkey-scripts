@@ -1,27 +1,28 @@
 // ==UserScript==
 // @name        Better Impressions & Not Interested - YouTube
 // @namespace   Violentmonkey Scripts
-// @match       https://www.youtube.com/
-// @grant       GM_getValue
-// @grant       GM_setValue
-// @version     1.1.0
+// @match       https://www.youtube.com/*
+// @grant       GM.getValue
+// @grant       GM.setValue
+// @version     1.1.1
 // @author      cecilia-sanare
 // @description Removes videos that surpass a impression threshold or if the user specifies they aren't interested
 // @downloadURL https://raw.githubusercontent.com/cecilia-sanare/violentmonkey-scripts/refs/heads/main/youtube/better-impressions-and-not-interested.js
 // @homepageURL https://github.com/cecilia-sanare/violentmonkey-scripts
+// @top-level-await
 // ==/UserScript==
 
 const getValue = (key, defaultValue) => {
-  if (!GM_getValue(key)) {
-    GM_setValue(key, value);
+  if (!GM.getValue(key)) {
+    GM.setValue(key, defaultValue);
   }
 
-  return GM_getValue(key);
+  return GM.getValue(key);
 };
 
 // Set this to 0 to disable
-const IMPRESSION_THRESHOLD = getValue('IMPRESSION_THRESHOLD', 3);
-const DAILY_RESET = getValue('DAILY_RESET', true);
+const IMPRESSION_THRESHOLD = await getValue('IMPRESSION_THRESHOLD', 3);
+const DAILY_RESET = await getValue('DAILY_RESET', true);
 
 const customStyles = document.createElement('style');
 
@@ -171,26 +172,38 @@ function getVideoId(video) {
   return url.searchParams.get('v') ?? null;
 }
 
-/**
- * Wait for a child element to exist
- */
-async function waitFor(tagName, root = document.body) {
-  return new Promise((resolve) => {
-    const observer = new MutationObserver((records) => {
-      for (const record of records) {
-        const element = Array.from(record.addedNodes).find((node) => node.tagName.toLowerCase() === tagName.toLowerCase());
+class Utils {
+  static async waitFor(invoker, { timer = 100, max_failures = 10 }) {
+      let failures = 0;
+      return new Promise((resolve, reject) => {
+        const id = setInterval(() => {
+          try {
+            const result = invoker();
 
-        if (element) {
-          observer.disconnect();
-          return resolve(element);
-        }
-      }
-    });
+            if (result) {
+              clearInterval(id);
+              resolve(result);
+            } else if (failures >= maxFailures) {
+              clearInterval(id);
+              reject('Failed to meet request.');
+            } else {
+              failures++;
+            }
+          } catch {
+            failures++;
+          }
+        }, timer);
+      });
+    }
+}
 
-    observer.observe(root, {
-      childList: true
-    });
-  });
+class DOM {
+  /**
+   * Wait for a element to exist
+   */
+  static async waitFor(selectors, options) {
+    return Utils.waitFor(() => document.querySelector(selectors), options)
+  }
 }
 
 function handleImpressions(videos, doNotRemove) {
@@ -232,11 +245,49 @@ function handleImpressions(videos, doNotRemove) {
   DSY.log(`${DSY.videos.hidden_count} videos ${doNotRemove ? 'hidden' : 'removed'}`);
 }
 
-const start = async () => {
-  const browse = await waitFor('ytd-browse', document.querySelector('ytd-page-manager'));
-  const contents = browse.querySelector('[id="contents"]');
+const onPopupOpened = (event) => {
+  const path = event.composedPath();
 
-  handleImpressions(Array.from(contents.querySelectorAll('ytd-rich-item-renderer')), true);
+  const id = getVideoId(path.find(isTagName('ytd-rich-item-renderer')));
+
+  if (!id) return;
+
+  if (path.some(isTagName('ytd-menu-renderer'))) {
+    const popup = document.querySelector('tp-yt-iron-dropdown');
+    const notInterestedDropdown = document.querySelector('tp-yt-iron-dropdown ytd-menu-service-item-renderer:nth-child(6)');
+    const popupObserver = new MutationObserver(() => {
+      if (popup.style.display !== 'none') return;
+
+      popupObserver.disconnect();
+      notInterestedDropdown.removeEventListener('click', onNotInterested);
+    });
+
+    const onNotInterested = () => {
+      DSY.not_interested.add(id);
+      DSY.commit();
+      popupObserver.disconnect();
+      notInterestedDropdown.removeEventListener('click', onNotInterested);
+    };
+
+    popupObserver.observe(popup, {
+      attributes: true
+    });
+    notInterestedDropdown.addEventListener('click', onNotInterested);
+  } else if (path.some(isAttribute('aria-label', 'Undo'))) {
+    DSY.not_interested.remove(id);
+    DSY.commit();
+  }
+};
+
+const start = async (initialLoad) => {
+  DSY.log('Starting...');
+  const contents = await DOM.waitFor('ytd-browse > ytd-two-column-browse-results-renderer[page-subtype="home"] [id="contents"]', {
+    timer: 500,
+    max_failures: 20
+  });
+
+  // Impressions were already handled so ignore
+  if (initialLoad) handleImpressions(Array.from(contents.querySelectorAll('ytd-rich-item-renderer')), true);
 
   const observer = new MutationObserver((records) => handleImpressions(flatten(records.map((record) => Array.from(record.addedNodes)))));
 
@@ -245,42 +296,42 @@ const start = async () => {
   });
 
   try {
-    document.addEventListener('click', (event) => {
-      const path = event.composedPath();
-
-      const id = getVideoId(path.find(isTagName('ytd-rich-item-renderer')));
-
-      if (!id) return;
-
-      if (path.some(isTagName('ytd-menu-renderer'))) {
-        const popup = document.querySelector('tp-yt-iron-dropdown');
-        const notInterestedDropdown = document.querySelector('tp-yt-iron-dropdown ytd-menu-service-item-renderer:nth-child(6)');
-        const popupObserver = new MutationObserver(() => {
-          if (popup.style.display !== 'none') return;
-
-          popupObserver.disconnect();
-          notInterestedDropdown.removeEventListener('click', onNotInterested);
-        });
-
-        const onNotInterested = () => {
-          DSY.not_interested.add(id);
-          DSY.commit();
-          popupObserver.disconnect();
-          notInterestedDropdown.removeEventListener('click', onNotInterested);
-        };
-
-        popupObserver.observe(popup, {
-          attributes: true
-        });
-        notInterestedDropdown.addEventListener('click', onNotInterested);
-      } else if (path.some(isAttribute('aria-label', 'Undo'))) {
-        DSY.not_interested.remove(id);
-        DSY.commit();
-      }
-    });
+    document.addEventListener('click', onPopupOpened);
   } catch {
     DSY.error('Failed to hook not interested option.');
   }
+
+  return observer.disconnect.bind(observer);
 };
 
-start();
+let disconnect = null;
+let initialLoad = true;
+const onNavigate = async (path) => {
+  switch (path) {
+    case '':
+    case '/':
+      disconnect = await start(initialLoad);
+      initialLoad = false;
+      break;
+    default:
+      DSY.log('Resetting...');
+      if (disconnect) disconnect();
+      document.removeEventListener('click', onPopupOpened);
+  }
+}
+
+let oldHref = document.location.href;
+const documentObserver = new MutationObserver(() => {
+  if (oldHref === document.location.href) return;
+
+  oldHref = document.location.href;
+
+  onNavigate(oldHref.replace(document.location.origin, ''));
+});
+
+documentObserver.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+onNavigate(oldHref.replace(document.location.origin, ''));
