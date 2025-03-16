@@ -8,7 +8,7 @@
 // @version     1.0
 // @author      cecilia-sanare
 // @description Automatically block unwanted domains on google or duckduckgo
-// @downloadURL https://raw.githubusercontent.com/cecilia-sanare/violentmonkey-scripts/refs/heads/main/youtube/block-domains.js
+// @downloadURL https://raw.githubusercontent.com/cecilia-sanare/violentmonkey-scripts/refs/heads/main/search/block-domains.js
 // @homepageURL https://github.com/cecilia-sanare/violentmonkey-scripts
 // ==/UserScript==
 
