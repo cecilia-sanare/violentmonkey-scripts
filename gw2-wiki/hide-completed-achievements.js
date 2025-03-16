@@ -108,8 +108,8 @@ const observer = new MutationObserver((records) => {
       total_achievements_th.innerHTML = `
         <div class="total-achievements">
           Completed!
-          <div class="total-achievements-icon done">
-            <svg title="Completed!" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <div class="total-achievements-icon done" title="Completed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
         </div>
       `;
@@ -117,8 +117,8 @@ const observer = new MutationObserver((records) => {
       total_achievements_th.innerHTML = `
         <div class="total-achievements">
           Remaining achievements: ${total_achievements - hidden_count} / ${total_achievements}
-          <div class="total-achievements-icon not-done">
-            <svg title="Completed!" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <div class="total-achievements-icon not-done" title="Not Completed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-x"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
           </div>
         </div>
       `;
