@@ -81,7 +81,7 @@ const observer = new MutationObserver((records) => {
     ];
   }, []);
 
-  const tables = document.querySelectorAll('table:has(tr[data-id^="achievement"])');
+  const tables = document.querySelectorAll('table.table:has(tr[data-id^="achievement"])');
 
   for (const table of tables) {
     const achievement_rows = table.querySelectorAll('tr[data-id^="achievement"]');
@@ -104,7 +104,9 @@ const observer = new MutationObserver((records) => {
     }
 
     if (total_achievements === hidden_count) {
+      // Stop pinging if all achievements are completed.
       clearInterval(interval);
+
       total_achievements_th.innerHTML = `
         <div class="total-achievements">
           Completed!
