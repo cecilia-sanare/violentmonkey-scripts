@@ -36,6 +36,10 @@ customStyles.innerHTML = `
     margin-left: calc(var(--ytd-rich-grid-item-margin)/2) !important;
   }
 
+  .yt-lockup-view-model__content-image {
+    position: relative;
+  }
+
   .impression-count {
     position: absolute;
     bottom: 0;
@@ -43,9 +47,11 @@ customStyles.innerHTML = `
     font-size: 14px;
     background: rgba(0, 0, 0, 0.6);
     display: flex;
-    margin: 7px;
+    margin-left: 7px;
+    margin-bottom: 17px;
     padding: 1px 4px;
     border-radius: 3px;
+    color: white;
   }
 `;
 
